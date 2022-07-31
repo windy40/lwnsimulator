@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/brocaar/lorawan"
-
+	socketio "github.com/googollee/go-socket.io"
 	"github.com/windy40/lwnsimulator/codes"
 	"github.com/windy40/lwnsimulator/models"
 	dev "github.com/windy40/lwnsimulator/simulator/components/device"
@@ -18,7 +18,6 @@ import (
 	gw "github.com/windy40/lwnsimulator/simulator/components/gateway"
 	"github.com/windy40/lwnsimulator/simulator/util"
 	"github.com/windy40/lwnsimulator/socket"
-	socketio "github.com/googollee/go-socket.io"
 )
 
 func GetIstance() *Simulator {
@@ -31,6 +30,9 @@ func GetIstance() *Simulator {
 
 	s.ActiveDevices = make(map[int]int)
 	s.ActiveGateways = make(map[int]int)
+	// windy40 dev socket
+	s.Resources.LinkedDevSocket = make(map[int]socketio.Conn)
+	s.Resources.ConnDevSocket = make(map[string]int)
 
 	s.Forwarder = *f.Setup()
 

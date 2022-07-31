@@ -7,6 +7,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/brocaar/lorawan"
 	"github.com/windy40/lwnsimulator/codes"
 	dev "github.com/windy40/lwnsimulator/simulator/components/device"
 	f "github.com/windy40/lwnsimulator/simulator/components/forwarder"
@@ -15,7 +16,6 @@ import (
 	res "github.com/windy40/lwnsimulator/simulator/resources"
 	"github.com/windy40/lwnsimulator/simulator/util"
 	"github.com/windy40/lwnsimulator/socket"
-	"github.com/brocaar/lorawan"
 )
 
 //Simulator is a model

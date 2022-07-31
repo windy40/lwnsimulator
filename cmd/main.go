@@ -17,7 +17,6 @@ func main() {
 	simulatorRepository := repo.NewSimulatorRepository()
 	simulatorController := cnt.NewSimulatorController(simulatorRepository)
 	simulatorController.GetIstance()
-
 	log.Println("LWN Simulator is online...")
 
 	info, err = models.GetConfigFile("config.json")

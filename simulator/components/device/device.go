@@ -15,13 +15,15 @@ import (
 )
 
 type Device struct {
-	State     int                      `json:"-"`
-	Exit      chan struct{}            `json:"-"`
-	Id        int                      `json:"id"`
-	Info      models.InformationDevice `json:"info"`
-	Class     classes.Class            `json:"-"`
-	Resources *res.Resources           `json:"-"`
-	Mutex     sync.Mutex               `json:"-"`
+	State int           `json:"-"`
+	Exit  chan struct{} `json:"-"`
+	// windy40 dev socket
+	UplinkWaiting chan struct{}            `json:"-"`
+	Id            int                      `json:"id"`
+	Info          models.InformationDevice `json:"info"`
+	Class         classes.Class            `json:"-"`
+	Resources     *res.Resources           `json:"-"`
+	Mutex         sync.Mutex               `json:"-"`
 }
 
 //*******************Intern func*******************/
@@ -98,17 +100,21 @@ func (d *Device) Print(content string, err error, printType int) {
 	class := d.Class.ToString()
 	mode := d.modeToString()
 
+	name := d.Info.Name
+	if d.Info.Status.LinkedDev {
+		name = fmt.Sprintf("*%s", name)
+	}
 	if err == nil {
-		message = fmt.Sprintf("[ %s ] DEV[%s] |%s| {%s}: %s", now.Format(time.Stamp), d.Info.Name, mode, class, content)
-		messageLog = fmt.Sprintf("DEV[%s] |%s| {%s}: %s", d.Info.Name, mode, class, content)
+		message = fmt.Sprintf("[ %s ] DEV[%s] |%s| {%s}: %s", now.Format(time.Stamp), name, mode, class, content)
+		messageLog = fmt.Sprintf("DEV[%s] |%s| {%s}: %s", name, mode, class, content)
 	} else {
-		message = fmt.Sprintf("[ %s ] DEV[%s] |%s| {%s} [ERROR]: %s", now.Format(time.Stamp), d.Info.Name, mode, class, err)
-		messageLog = fmt.Sprintf("DEV[%s] |%s| {%s} [ERROR]: %s", d.Info.Name, mode, class, err)
+		message = fmt.Sprintf("[ %s ] DEV[%s] |%s| {%s} [ERROR]: %s", now.Format(time.Stamp), name, mode, class, err)
+		messageLog = fmt.Sprintf("DEV[%s] |%s| {%s} [ERROR]: %s", name, mode, class, err)
 		event = socket.EventError
 	}
 
 	data := socket.ConsoleLog{
-		Name: d.Info.Name,
+		Name: name,
 		Msg:  message,
 	}
 

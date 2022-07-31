@@ -5,7 +5,13 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
+	"github.com/brocaar/lorawan"
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+	socketio "github.com/googollee/go-socket.io"
+	"github.com/rakyll/statik/fs"
 	cnt "github.com/windy40/lwnsimulator/controllers"
 	"github.com/windy40/lwnsimulator/models"
 	dev "github.com/windy40/lwnsimulator/simulator/components/device"
@@ -14,11 +20,6 @@ import (
 	gw "github.com/windy40/lwnsimulator/simulator/components/gateway"
 	"github.com/windy40/lwnsimulator/socket"
 	_ "github.com/windy40/lwnsimulator/webserver/statik"
-	"github.com/brocaar/lorawan"
-	"github.com/gin-contrib/cors"
-	"github.com/gin-gonic/gin"
-	socketio "github.com/googollee/go-socket.io"
-	"github.com/rakyll/statik/fs"
 )
 
 //WebServer type
@@ -212,10 +213,16 @@ func newServerSocket() *socketio.Server {
 
 	serverSocket.OnConnect("/", func(s socketio.Conn) error {
 
-		log.Println("[WS]: Socket connected")
+		remote_hdr := s.RemoteHeader()
+		v, ok := remote_hdr["User-Agent"]
 
-		s.SetContext("")
-		simulatorController.AddWebSocket(&s)
+		if ok && strings.Contains(v[0], "Mozilla") {
+
+			log.Println("[WS]: Socket connected\n")
+
+			s.SetContext("")
+			simulatorController.AddWebSocket(&s)
+		}
 
 		return nil
 
@@ -262,6 +269,8 @@ func newServerSocket() *socketio.Server {
 	serverSocket.OnEvent("/", socket.EventChangeLocation, func(s socketio.Conn, info socket.NewLocation) bool {
 		return simulatorController.ChangeLocation(info)
 	})
+
+	setupDevEventHandler(serverSocket)
 
 	return serverSocket
 }

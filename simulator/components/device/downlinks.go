@@ -3,10 +3,12 @@ package device
 import (
 	"github.com/windy40/lwnsimulator/simulator/util"
 
+	"github.com/brocaar/lorawan"
 	act "github.com/windy40/lwnsimulator/simulator/components/device/activation"
 	"github.com/windy40/lwnsimulator/simulator/components/device/classes"
 	dl "github.com/windy40/lwnsimulator/simulator/components/device/frames/downlink"
-	"github.com/brocaar/lorawan"
+
+	"github.com/windy40/lwnsimulator/socket"
 )
 
 func (d *Device) ProcessDownlink(phy lorawan.PHYPayload) (*dl.InformationDownlink, error) {
@@ -35,6 +37,11 @@ func (d *Device) ProcessDownlink(phy lorawan.PHYPayload) (*dl.InformationDownlin
 			return nil, err
 		}
 
+		if d.Info.Status.LinkedDev {
+			d.Info.Status.BufferDataDownlinks = append(d.Info.Status.BufferDataDownlinks, *payload)
+			d.ReturnLoraEvent(socket.RX_PACKET_EVENT)
+		}
+
 	case lorawan.ConfirmedDataDown: //ack
 
 		payload, err = dl.GetDownlink(phy, d.Info.Configuration.DisableFCntDown, d.Info.Status.FCntDown,
@@ -44,6 +51,11 @@ func (d *Device) ProcessDownlink(phy lorawan.PHYPayload) (*dl.InformationDownlin
 		}
 
 		d.SendAck()
+
+		if d.Info.Status.LinkedDev {
+			d.Info.Status.BufferDataDownlinks = append(d.Info.Status.BufferDataDownlinks, *payload)
+			d.ReturnLoraEvent(socket.RX_PACKET_EVENT)
+		}
 
 	}
 

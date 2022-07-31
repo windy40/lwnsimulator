@@ -100,6 +100,7 @@ func (d *Device) ExecuteMACCommand(downlink dl.InformationDownlink) {
 	if len(LinkADRReqCommands) != 0 {
 		d.executeLinkADRReq(LinkADRReqCommands)
 	}
+	
 
 }
 

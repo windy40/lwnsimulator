@@ -1,13 +1,13 @@
 package controllers
 
 import (
+	"github.com/brocaar/lorawan"
+	socketio "github.com/googollee/go-socket.io"
 	"github.com/windy40/lwnsimulator/models"
 	repo "github.com/windy40/lwnsimulator/repositories"
 	dev "github.com/windy40/lwnsimulator/simulator/components/device"
 	gw "github.com/windy40/lwnsimulator/simulator/components/gateway"
 	e "github.com/windy40/lwnsimulator/socket"
-	"github.com/brocaar/lorawan"
-	socketio "github.com/googollee/go-socket.io"
 )
 
 //SimulatorController interfaccia controller
@@ -15,7 +15,15 @@ type SimulatorController interface {
 	Run() bool
 	Stop() bool
 	GetIstance()
+
 	AddWebSocket(*socketio.Conn)
+	// windy40 dev sockets
+	DevExecuteLinkDev(*socketio.Conn, int)
+	DeleteDevSocket(string)
+	DevExecuteJoinRequest(int)
+	DevExecuteSendUplink(int, e.DevExecuteSendUplink)
+	DevExecuteRecvDownlink(int, e.DevExecuteRecvDownlink)
+	// windy40
 	SaveBridgeAddress(models.AddressIP) error
 	GetBridgeAddress() models.AddressIP
 	GetGateways() []gw.Gateway
@@ -53,11 +61,38 @@ func (c *simulatorController) AddWebSocket(socket *socketio.Conn) {
 	c.repo.AddWebSocket(socket)
 }
 
+// windy40 dev sockets
+
+func (c *simulatorController) DevExecuteLinkDev(socket *socketio.Conn, Id int) {
+	c.repo.DevExecuteLinkDev(socket, Id)
+}
+
+func (c *simulatorController) DeleteDevSocket(SId string) {
+	c.repo.DeleteDevSocket(SId)
+}
+
+func (c *simulatorController) DevExecuteJoinRequest(Id int) {
+	c.repo.DevExecuteJoinRequest(Id)
+}
+
+func (c *simulatorController) DevExecuteSendUplink(Id int, data e.DevExecuteSendUplink) {
+	c.repo.DevExecuteSendUplink(Id, data)
+}
+func (c *simulatorController) DevExecuteRecvDownlink(Id int, data e.DevExecuteRecvDownlink) {
+	c.repo.DevExecuteRecvDownlink(Id, data)
+}
+
+// windy40
+
 func (c *simulatorController) Run() bool {
 	return c.repo.Run()
 }
 
 func (c *simulatorController) Stop() bool {
+	return c.repo.Stop()
+}
+
+func (c *simulatorController) IsRunning() bool {
 	return c.repo.Stop()
 }
 

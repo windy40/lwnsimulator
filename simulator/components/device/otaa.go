@@ -4,12 +4,14 @@ import (
 	"math/rand"
 	"time"
 
+	// windy40
 	"github.com/windy40/lwnsimulator/simulator/util"
+	"github.com/windy40/lwnsimulator/socket"
 
+	"github.com/brocaar/lorawan"
 	act "github.com/windy40/lwnsimulator/simulator/components/device/activation"
 	"github.com/windy40/lwnsimulator/simulator/components/device/classes"
 	dl "github.com/windy40/lwnsimulator/simulator/components/device/frames/downlink"
-	"github.com/brocaar/lorawan"
 )
 
 const (
@@ -55,6 +57,11 @@ func (d *Device) OtaaActivation() {
 
 			d.Print("Joined", nil, util.PrintBoth)
 			d.Info.Status.Mode = util.Normal
+
+			if d.Info.Status.LinkedDev {
+				d.ReturnLoraEvent(socket.JOIN_ACCEPT_EVENT)
+
+			}
 
 			return
 		}

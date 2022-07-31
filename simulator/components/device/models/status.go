@@ -3,18 +3,19 @@ package models
 import (
 	"encoding/json"
 
+	"github.com/brocaar/lorawan"
 	modelClass "github.com/windy40/lwnsimulator/simulator/components/device/classes/models_classes"
 	"github.com/windy40/lwnsimulator/simulator/components/device/features/channels"
 	dl "github.com/windy40/lwnsimulator/simulator/components/device/frames/downlink"
 	up "github.com/windy40/lwnsimulator/simulator/components/device/frames/uplink"
 	mup "github.com/windy40/lwnsimulator/simulator/components/device/frames/uplink/models"
-	"github.com/brocaar/lorawan"
 )
 
 type Status struct {
-	Active bool `json:"active"`
-	Joined bool `json:"-"`
-	Mode   int  `json:"-"`
+	Active    bool `json:"active"`
+	LinkedDev bool `json:"linked"`
+	Joined    bool `json:"-"`
+	Mode      int  `json:"-"`
 
 	DataUplink    up.InfoUplink   `json:"infoUplink"`
 	MType         lorawan.MType   `json:"mtype"`   // from UI
@@ -23,6 +24,8 @@ type Status struct {
 
 	DataDownlink dl.InformationDownlink `json:"-"`
 	FCntDown     uint32                 `json:"fcntDown"`
+	// windy40 dev socket
+	BufferDataDownlinks []dl.InformationDownlink `json:"-"`
 
 	DataRate uint8 `json:"-"`
 	TXPower  uint8 `json:"-"`

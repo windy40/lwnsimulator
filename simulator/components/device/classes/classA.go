@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/brocaar/lorawan"
 	dl "github.com/windy40/lwnsimulator/simulator/components/device/frames/downlink"
 	pkt "github.com/windy40/lwnsimulator/simulator/resources/communication/packets"
 	"github.com/windy40/lwnsimulator/simulator/util"
-	"github.com/brocaar/lorawan"
 
 	"github.com/windy40/lwnsimulator/simulator/components/device/models"
 )
