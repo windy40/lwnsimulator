@@ -14,6 +14,13 @@ import (
 	"github.com/windy40/lwnsimulator/socket"
 )
 
+func LinkedDevName(d *dev.Device) string {
+	name := d.Info.Name
+	if d.Info.Status.LinkedDev {
+		name = fmt.Sprintf("*%s", d.Info.Name)
+	}
+	return name
+}
 func (s *Simulator) getDeviceWithDevEUI(devEUIstr string) (dev *dev.Device, err error) {
 	devices := s.Devices
 
@@ -32,44 +39,82 @@ func (s *Simulator) getDeviceWithDevEUI(devEUIstr string) (dev *dev.Device, err 
 }
 
 func (s *Simulator) DevExecuteLinkDev(DevSocket *socketio.Conn, Id int) {
-
-	if s.Devices[Id].Info.Status.LinkedDev {
+	d := s.Devices[Id]
+	if d.Info.Status.LinkedDev {
 		// only need to update dev socket
-		log.Println(fmt.Sprintf("DEV[*%s] dev socket updated %s", s.Devices[Id].Info.Name, (*DevSocket).ID()))
+		log.Println(fmt.Sprintf("DEV[%s] dev socket updated %s", LinkedDevName(d), (*DevSocket).ID()))
 		s.Resources.AddDevSocket(DevSocket, Id)
+
+		if s.State == util.Running && !d.IsOn() {
+			s.turnONDevice(Id)
+		}
+		s.Resources.LinkedDevSocket[d.Id].Emit(socket.DevEventResponseCmd, socket.DevResponseCmd{Cmd: socket.DevCmdLinkDev, Error: codes.DevCmdOK})
+
 		return
 	}
 	// device not yet linked to external dev
-	if s.Devices[Id].IsOn() {
+	if d.IsOn() {
 		s.turnOFFDevice(Id)
 	}
 
-	s.Devices[Id].Info.Status.LinkedDev = true
+	d.Info.Status.LinkedDev = true
 	s.Resources.AddDevSocket(DevSocket, Id)
 
-	log.Println(fmt.Sprintf("DEV[%s] linked to external dev with socket %s", s.Devices[Id].Info.Name, (*DevSocket).ID()))
+	log.Println(fmt.Sprintf("DEV[%s] linked to external dev with socket %s", LinkedDevName(d), (*DevSocket).ID()))
 
 	if s.State == util.Running {
 		s.turnONDevice(Id)
 	}
 
-	s.Resources.LinkedDevSocket[Id].Emit(socket.DevEventResponseCmd, socket.DevResponseCmd{Cmd: socket.DevCmdLinkDev, Error: codes.DevCmdOK})
+	s.Resources.LinkedDevSocket[d.Id].Emit(socket.DevEventResponseCmd, socket.DevResponseCmd{Cmd: socket.DevCmdLinkDev, Error: codes.DevCmdOK})
 
+	return
 }
 
-func (s *Simulator) DeleteDevSocket(SId string) {
-	s.Resources.DeleteDevSocket(SId)
+func (s *Simulator) DevExecuteUnlinkDev(DevSocket *socketio.Conn, Id int) {
+	d := s.Devices[Id]
+	if !d.Info.Status.LinkedDev {
+
+		s.Resources.LinkedDevSocket[d.Id].Emit(socket.DevEventResponseCmd, socket.DevResponseCmd{Cmd: socket.DevCmdUnlinkDev, Error: codes.DevErrorDeviceNotLinked})
+
+		return
+	}
+	// if device is on, first unjoin then turnOFF
+	if d.IsOn() {
+		if d.Info.Status.Joined {
+			d.UnJoined()
+			log.Println(fmt.Sprintf("DEV[%s] unjoined", LinkedDevName(d)))
+
+		}
+		s.turnOFFDevice(Id)
+	}
+
+	d.Info.Status.LinkedDev = true // keep it as Linkable device and turnedOFF
+
+	log.Println(fmt.Sprintf("DEV[%s] unlinked from external dev on socket %s", LinkedDevName(d), (*DevSocket).ID()))
+
+	s.Resources.LinkedDevSocket[d.Id].Emit(socket.DevEventResponseCmd, socket.DevResponseCmd{Cmd: socket.DevCmdUnlinkDev, Error: codes.DevCmdOK})
+
+	return
 }
 
 func (s *Simulator) DevExecuteJoinRequest(Id int) {
 	d := s.Devices[Id]
 	if !d.IsOn() {
-		log.Println(fmt.Sprintf("DEV[%s][CMD %s] device turned off", d.Info.Name, socket.DevCmdJoinRequest))
-		d.Resources.LinkedDevSocket[d.Id].Emit(socket.DevEventResponseCmd, socket.DevResponseCmd{Cmd: socket.DevCmdJoinRequest, Error: codes.DevErrorDeviceTurnedOFF})
+		log.Println(fmt.Sprintf("DEV[%s][CMD %s] device turned off", LinkedDevName(d), socket.DevCmdJoinRequest))
+		s.Resources.LinkedDevSocket[d.Id].Emit(socket.DevEventResponseCmd, socket.DevResponseCmd{Cmd: socket.DevCmdJoinRequest, Error: codes.DevErrorDeviceTurnedOFF})
+		return
+	}
+
+	if d.Info.Status.Joined {
+		log.Println(fmt.Sprintf("DEV[%s][CMD %s] device already joined", LinkedDevName(d), socket.DevCmdJoinRequest))
+		s.Resources.LinkedDevSocket[d.Id].Emit(socket.DevEventResponseCmd, socket.DevResponseCmd{Cmd: socket.DevCmdJoinRequest, Error: codes.DevErrorDeviceAlreadyJoined})
 		return
 	}
 
 	go d.DevJoinAndProcessUplink()
+
+	return
 }
 
 func (s *Simulator) DevExecuteSendUplink(Id int, data socket.DevExecuteSendUplink) {
@@ -77,14 +122,16 @@ func (s *Simulator) DevExecuteSendUplink(Id int, data socket.DevExecuteSendUplin
 	mtype := data.MType
 	payload := data.Payload
 	if !d.IsOn() {
-		log.Println(fmt.Sprintf("DEV[%s][CMD %s] device turned off", d.Info.Name, data.Cmd))
-		d.Resources.LinkedDevSocket[d.Id].Emit(socket.DevEventResponseCmd, socket.DevResponseCmd{Cmd: data.Cmd, Error: codes.DevErrorDeviceTurnedOFF})
+
+		log.Println(fmt.Sprintf("DEV[%s][CMD %s] device turned off", LinkedDevName(d), data.Cmd))
+		s.Resources.LinkedDevSocket[d.Id].Emit(socket.DevEventResponseCmd, socket.DevResponseCmd{Cmd: data.Cmd, Error: codes.DevErrorDeviceTurnedOFF})
 		return
 	}
 
 	if !d.Info.Status.Joined {
-		log.Println(fmt.Sprintf("DEV[%s][CMD %s]Error dev not joined", d.Info.Name, socket.DevCmdSendUplink))
-		d.Resources.LinkedDevSocket[d.Id].Emit(socket.DevEventResponseCmd, socket.DevResponseCmd{Cmd: socket.DevCmdSendUplink, Error: codes.DevErrorDeviceNotJoined})
+
+		log.Println(fmt.Sprintf("DEV[%s][CMD %s]Error dev not joined", LinkedDevName(d), socket.DevCmdSendUplink))
+		s.Resources.LinkedDevSocket[d.Id].Emit(socket.DevEventResponseCmd, socket.DevResponseCmd{Cmd: socket.DevCmdSendUplink, Error: codes.DevErrorDeviceNotJoined})
 		return
 	}
 
@@ -96,10 +143,10 @@ func (s *Simulator) DevExecuteSendUplink(Id int, data socket.DevExecuteSendUplin
 	d.NewUplink(MType, payload)
 	d.UplinkWaiting <- struct{}{}
 
-	d.Resources.LinkedDevSocket[d.Id].Emit(socket.DevEventResponseCmd, socket.DevResponseCmd{Cmd: socket.DevCmdSendUplink, Error: codes.DevCmdOK})
-
+	//d.Resources.LinkedDevSocket[d.Id].Emit(socket.DevEventResponseCmd, socket.DevResponseCmd{Cmd: socket.DevCmdSendUplink, Error: codes.DevCmdOK})
 	//	s.Resources.WebSocket.Emit(socket.EventResponseCommand, "Uplink queued")
 
+	return
 }
 
 func (s *Simulator) DevExecuteRecvDownlink(Id int, data socket.DevExecuteRecvDownlink) {
@@ -108,14 +155,16 @@ func (s *Simulator) DevExecuteRecvDownlink(Id int, data socket.DevExecuteRecvDow
 	BufferSize := data.BufferSize
 
 	if !d.IsOn() {
-		log.Println(fmt.Sprintf("DEV[%s][CMD %s] device turned off", d.Info.Name, socket.DevCmdRecvDownlink))
-		d.Resources.LinkedDevSocket[d.Id].Emit(socket.DevEventResponseCmd, socket.DevResponseCmd{Cmd: socket.DevCmdRecvDownlink, Error: codes.DevErrorDeviceTurnedOFF})
+
+		log.Println(fmt.Sprintf("DEV[%s][CMD %s] device turned off", LinkedDevName(d), socket.DevCmdRecvDownlink))
+		s.Resources.LinkedDevSocket[d.Id].Emit(socket.DevEventResponseCmd, socket.DevResponseCmd{Cmd: socket.DevCmdRecvDownlink, Error: codes.DevErrorDeviceTurnedOFF})
 		return
 	}
 
 	if !d.Info.Status.Joined {
-		log.Println(fmt.Sprintf("DEV[%s][CMD %s]Error dev not joined", d.Info.Name, socket.DevCmdRecvDownlink))
-		d.Resources.LinkedDevSocket[d.Id].Emit(socket.DevEventResponseCmd, socket.DevResponseCmd{Cmd: socket.DevCmdRecvDownlink, Error: codes.DevErrorDeviceNotJoined})
+
+		log.Println(fmt.Sprintf("DEV[%s][CMD %s]Error dev not joined", LinkedDevName(d), socket.DevCmdRecvDownlink))
+		s.Resources.LinkedDevSocket[d.Id].Emit(socket.DevEventResponseCmd, socket.DevResponseCmd{Cmd: socket.DevCmdRecvDownlink, Error: codes.DevErrorDeviceNotJoined})
 		return
 	}
 
@@ -144,6 +193,20 @@ func (s *Simulator) DevExecuteRecvDownlink(Id int, data socket.DevExecuteRecvDow
 
 		s.Devices[d.Id].Resources.LinkedDevSocket[d.Id].Emit(socket.DevEventResponseCmd, socket.DevResponseRecvDownlink{Cmd: socket.DevEventRecvDownlink, Error: codes.DevCmdOK, MType: mtype, Payload: string(payload)})
 
-	}
+	} else {
 
+		s.Devices[d.Id].Resources.LinkedDevSocket[d.Id].Emit(socket.DevEventResponseCmd, socket.DevResponseRecvDownlink{Cmd: socket.DevEventRecvDownlink, Error: codes.DevErrorRecvBufferEmpty, MType: "", Payload: ""})
+
+	}
+	return
+}
+
+func (s *Simulator) DeleteDevSocket(SId string) {
+	if Id, ok := s.Resources.ConnDevSocket[SId]; ok {
+		d := s.Devices[Id]
+		if d.Info.Status.Joined {
+			d.UnJoined()
+		}
+		s.Resources.DeleteDevSocket(SId)
+	}
 }

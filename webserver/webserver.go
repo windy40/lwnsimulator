@@ -212,7 +212,7 @@ func newServerSocket() *socketio.Server {
 	serverSocket := socketio.NewServer(nil)
 
 	serverSocket.OnConnect("/", func(s socketio.Conn) error {
-
+		// windy40 dev socket : distinguish connection from web interface and from device
 		remote_hdr := s.RemoteHeader()
 		v, ok := remote_hdr["User-Agent"]
 

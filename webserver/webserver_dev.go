@@ -43,27 +43,46 @@ func setupDevEventHandler(serverSocket *socketio.Server) {
 
 	})
 
-	serverSocket.OnEvent("/dev", socket.DevEventLinkDev, func(s socketio.Conn, data socket.DevExecuteCmd) {
+	serverSocket.OnDisconnect("/dev", func(s socketio.Conn, reason string) {
 
-		handle_cmd(s, data)
+		log.Println(fmt.Sprintf("[DevWS] DevSocket %s disconnected : %s", s.ID(), reason))
+		simulatorController.DeleteDevSocket(s.ID())
 
-	})
-	serverSocket.OnEvent("/dev", socket.DevEventJoinRequest, func(s socketio.Conn, data socket.DevExecuteCmd) {
-
-		handle_cmd(s, data)
+		return
 
 	})
 
-	serverSocket.OnEvent("/dev", socket.DevEventSendUplink, func(s socketio.Conn, data socket.DevExecuteSendUplink) {
+	serverSocket.OnEvent("/dev", socket.DevEventLinkDev, func(s socketio.Conn, data socket.DevExecuteCmd) (error, string) {
 
 		handle_cmd(s, data)
+		return nil, "linked"
 
 	})
 
-	serverSocket.OnEvent("/dev", socket.DevEventRecvDownlink, func(s socketio.Conn, data socket.DevExecuteRecvDownlink) {
+	serverSocket.OnEvent("/dev", socket.DevEventUnlinkDev, func(s socketio.Conn, data socket.DevExecuteCmd) error {
 
 		handle_cmd(s, data)
+		return nil
 
+	})
+
+	serverSocket.OnEvent("/dev", socket.DevEventJoinRequest, func(s socketio.Conn, data socket.DevExecuteCmd) error {
+
+		handle_cmd(s, data)
+		return nil
+
+	})
+
+	serverSocket.OnEvent("/dev", socket.DevEventSendUplink, func(s socketio.Conn, data socket.DevExecuteSendUplink) error {
+
+		handle_cmd(s, data)
+		return nil
+	})
+
+	serverSocket.OnEvent("/dev", socket.DevEventRecvDownlink, func(s socketio.Conn, data socket.DevExecuteRecvDownlink) error {
+
+		handle_cmd(s, data)
+		return nil
 	})
 }
 
@@ -91,15 +110,11 @@ func handle_cmd(s socketio.Conn, data socket.DevExecuteCmdInter) {
 		s.Emit(socket.DevEventResponseCmd, socket.DevResponseCmd{Cmd: cmd, Error: codes.DevErrorNoDeviceWithDevEUI})
 	}
 
-	if cmd != socket.DevCmdLinkDev && cmd != socket.DevCmdJoinRequest && !d.Info.Status.Joined {
-		log.Println(fmt.Sprintf("DEV[%s][CMD %s]Error dev with devEUI %s not joined", d.Info.Name, cmd, devEUI))
-		s.Emit(socket.DevEventResponseCmd, socket.DevResponseCmd{Cmd: cmd, Error: codes.DevErrorDeviceNotJoined})
-
-	}
-
 	switch cmd {
 	case socket.DevCmdLinkDev:
 		simulatorController.DevExecuteLinkDev(&s, d.Id)
+	case socket.DevCmdUnlinkDev:
+		simulatorController.DevExecuteUnlinkDev(&s, d.Id)
 	case socket.DevCmdJoinRequest:
 		simulatorController.DevExecuteJoinRequest(d.Id)
 	case socket.DevCmdSendUplink:

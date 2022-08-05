@@ -3,15 +3,14 @@ package socket
 const (
 	DevEventLog   = "dev-log"
 	DevEventError = "dev-error"
-	DevEventTest  = "test"
 
 	DevEventLinkDev      = "link-dev"
+	DevEventUnlinkDev    = "unlink-dev"
 	DevEventJoinRequest  = "join-request"
 	DevEventSendUplink   = "send-uplink"
 	DevEventRecvDownlink = "recv-downlink"
-	/*
-		DevEventExecuteCmd  = "execute-cmd"
-	*/
+
+	DevEventExecuteCmd  = "execute-cmd"
 	DevEventResponseCmd = "response-cmd"
 
 	DevEventAckCmd = "ack-cmd"
@@ -20,14 +19,15 @@ const (
 
 const (
 	DevCmdLinkDev      = "link-dev"
+	DevCmdUnlinkDev    = "unlink-dev"
 	DevCmdJoinRequest  = "join-request"
 	DevCmdSendUplink   = "send-uplink"
 	DevCmdRecvDownlink = "recv-downlink"
 )
 
 const (
-	RX_PACKET_EVENT = iota
-	TX_PACKET_EVENT
-	TX_FAILED_EVENT
-	JOIN_ACCEPT_EVENT
+	RX_PACKET_EVENT   = 1
+	TX_PACKET_EVENT   = 2
+	TX_FAILED_EVENT   = 4
+	JOIN_ACCEPT_EVENT = 16
 )

@@ -1,1 +1,3 @@
 bin
+/cmd/lwnsimulator.exe
+/cmd/bin/*.exe

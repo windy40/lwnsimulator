@@ -23,6 +23,7 @@ type SimulatorRepository interface {
 	AddWebSocket(*socketio.Conn)
 	// windy40 dev sockets
 	DevExecuteLinkDev(*socketio.Conn, int)
+	DevExecuteUnlinkDev(*socketio.Conn, int)
 	DeleteDevSocket(string)
 	DevExecuteJoinRequest(int)
 	DevExecuteSendUplink(int, e.DevExecuteSendUplink)
@@ -67,6 +68,10 @@ func (s *simulatorRepository) AddWebSocket(socket *socketio.Conn) {
 
 func (s *simulatorRepository) DevExecuteLinkDev(socket *socketio.Conn, Id int) {
 	s.sim.DevExecuteLinkDev(socket, Id)
+}
+
+func (s *simulatorRepository) DevExecuteUnlinkDev(socket *socketio.Conn, Id int) {
+	s.sim.DevExecuteUnlinkDev(socket, Id)
 }
 
 func (s *simulatorRepository) DeleteDevSocket(SId string) {

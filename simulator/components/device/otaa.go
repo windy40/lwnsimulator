@@ -6,7 +6,6 @@ import (
 
 	// windy40
 	"github.com/windy40/lwnsimulator/simulator/util"
-	"github.com/windy40/lwnsimulator/socket"
 
 	"github.com/brocaar/lorawan"
 	act "github.com/windy40/lwnsimulator/simulator/components/device/activation"
@@ -57,11 +56,6 @@ func (d *Device) OtaaActivation() {
 
 			d.Print("Joined", nil, util.PrintBoth)
 			d.Info.Status.Mode = util.Normal
-
-			if d.Info.Status.LinkedDev {
-				d.ReturnLoraEvent(socket.JOIN_ACCEPT_EVENT)
-
-			}
 
 			return
 		}

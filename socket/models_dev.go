@@ -1,16 +1,5 @@
 package socket
 
-type DevDevEUI struct {
-	DevEUI string `json:"devEUI"`
-	Ack    bool   `json:"ack"`
-}
-
-type DevPayload struct {
-	DevEUI  string `json:"devEUI"`
-	MType   string `json:"mtype"`
-	Payload string `json:"payload"`
-}
-
 type DevExecuteCmdInter interface {
 	GetCmd() string
 	GetAck() bool

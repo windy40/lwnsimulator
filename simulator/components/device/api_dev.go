@@ -3,6 +3,7 @@ package device
 import (
 	"github.com/windy40/lwnsimulator/simulator/components/device/classes"
 	"github.com/windy40/lwnsimulator/simulator/util"
+	"github.com/windy40/lwnsimulator/socket"
 )
 
 func (d *Device) DevJoinAndProcessUplink() {
@@ -12,9 +13,16 @@ func (d *Device) DevJoinAndProcessUplink() {
 	d.Print("trying to join ...", nil, util.PrintBoth)
 	d.OtaaActivation()
 
-	if !d.Info.Status.Joined {
-		d.Print("Could not join", nil, util.PrintBoth)
-		return
+	if d.Info.Status.Joined {
+		if d.Info.Status.LinkedDev {
+			d.ReturnLoraEvent(socket.JOIN_ACCEPT_EVENT)
+
+		} else {
+			d.Print("Could not join", nil, util.PrintBoth)
+			return
+
+		}
+
 	}
 	for {
 
